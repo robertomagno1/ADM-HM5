@@ -1,0 +1,10 @@
+.DS_Store
+*/.DS_Store
+//.DS_Store
+
+Airports2.csv
+
+.ipynb_checkpoints/
+
+__pycache__/
+*.pyc
