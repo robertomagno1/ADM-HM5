@@ -4,7 +4,7 @@ from collections import defaultdict
 def floyd_warshall(graph, n):
     """
     Compute shortest paths between all pairs of nodes using Floyd-Warshall.
-    
+
     Args:
         graph (dict): Adjacency list representation of the graph.
         n (int): Number of nodes.
