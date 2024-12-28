@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import networkx as nx   
+import pandas as pd
+import itertools
 
 def find_connected_components(graph, method="dfs_recursive"):
     """
@@ -769,6 +771,7 @@ def df_to_adjacency_matrix(df, weight_col="Passengers"):
     """
     Convert airport DataFrame to an adjacency matrix.
     """
+    import pandas as pd
     cities = pd.concat([df["Origin_city"], df["Destination_city"]]).unique()
     city_to_idx = {city: idx for idx, city in enumerate(cities)}
     n = len(cities)
@@ -1002,3 +1005,219 @@ def analyze_communities(graph, communities):
         communities
     )
     print(f"Modularity Score: {modularity:.4f}")
+
+# part 3
+
+def prepare_flight_graph(df, flight_date):
+    """
+    Prepare a weighted graph filtered by a specific flight date.
++    """
+    filtered_df = df[df['Fly_date'] == flight_date]
+    
+    if filtered_df.empty:
+        raise ValueError("[ERROR] No flights available on the given date.")
+    
+    graph = defaultdict(set)  # Graph adjacency list (node: set of neighbors)
+    weights = {}  # Edge weights (tuple(node1, node2): weight)
+    
+    for _, row in filtered_df.iterrows():
+        # populate graph
+        origin = row['Origin_airport']
+        dest = row['Destination_airport']
+        # and weights
+        distance = row['Distance']
+        
+        graph[origin].add(dest)  # Add destination as a neighbor of origin
+        weights[(origin, dest)] = distance  # Add distance as weight for the edge
+    
+    return graph, weights
+
+def get_city_airports(df, city, column):
+    """
+    Get a list of airports for a specific city.    
+    """
+    # Filter dataset by city and extract unique airport codes
+    return df[df[column] == city][column.replace('city', 'airport')].unique().tolist()
+
+def reconstruct_path(previous_nodes, start, end):
+    """
+    Reconstructs the shortest path from start to end using previous_nodes.
+    """
+    print(f"\n🔄 [DEBUG] Reconstructing path from '{start}' to '{end}'")
+    path = []
+    current_node = end
+    
+    # Backtrack from end to start using the 'previous_nodes' map
+    while current_node is not None:
+        path.insert(0, current_node)
+        current_node = previous_nodes.get(current_node)
+    
+    # Verify if a valid path exists
+    if not path or path[0] != start:
+        return "No route found"
+    
+    # Return if it does
+    formatted_path = " → ".join(path)
+    print(f"✅ [DEBUG] Path Found: {formatted_path}")
+    return formatted_path
+
+# I am just gonna explain the changes made from the previous version
+def dijkstra_adj_list_weighted(graph, weights, start_node):
+    """
+    Dijkstra's Algorithm for weighted graphs.
+    """
+    all_nodes = set(graph.keys()) # created to include nodes from both graph and weights
+    for (u, v) in weights.keys():
+        all_nodes.update([u, v]) # Ensures nodes referenced in weights but missing from graph are also included in the algorithm
+    # This avoids the issue where certain nodes are skipped because they were not part of graph.keys().
+    # Add missing nodes to the adjacency list
+    for node in all_nodes:
+        if node not in graph:
+            graph[node] = set()
+    
+    # Validate that each edge in weights exists in the adjacency list
+    for (u, v), weight in weights.items():
+        if v not in graph[u]:
+            graph[u].add(v)
+        if u not in graph[v]:
+            graph[v].add(u)
+
+    distances = {node: float('inf') for node in all_nodes}
+    previous_nodes = {node: None for node in all_nodes}
+
+    distances[start_node] = 0
+    priority_queue = [(0, start_node)]
+
+    while priority_queue:
+        current_distance, current_node = heapq.heappop(priority_queue)
+
+        if current_distance > distances[current_node]:
+            continue
+
+        for neighbor in graph.get(current_node, []):
+            if neighbor not in distances:
+                print(f"[WARNING] Neighbor node '{neighbor}' not found in distances. Skipping.")
+                continue
+
+            weight = weights.get((current_node, neighbor), float('inf')) # we actyally get the weight from the weights dictionary, instead of using a fixed value
+            distance = current_distance + weight
+
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                previous_nodes[neighbor] = current_node
+                heapq.heappush(priority_queue, (distance, neighbor))
+
+    return distances, previous_nodes
+
+def compute_best_routes_between_cities(df, origin_city, destination_city, flight_date):
+    """
+    Compute the best routes between airports in two cities on a given date.
+    """
+    
+    filtered_df = df[df['Fly_date'] == flight_date]
+    print(f"[DEBUG] Filtered dataset contains {len(filtered_df)} flights on {flight_date}.")
+    
+    origin_airports = get_city_airports(filtered_df, origin_city, 'Origin_city')
+    destination_airports = get_city_airports(filtered_df, destination_city, 'Destination_city')
+    
+    if not origin_airports or not destination_airports:
+        return print("[ERROR] No flights available for the given cities on the specified date.")
+        
+    airport_pairs = list(itertools.product(origin_airports, destination_airports))
+    print(f"[DEBUG] Generated {len(airport_pairs)} airport pairs to evaluate.")
+    
+    graph, weights = prepare_flight_graph(filtered_df, flight_date)
+    
+    results = []
+    for origin, destination in airport_pairs:
+        print(f"\n🔄 [DEBUG] Processing pair: {origin} → {destination}")
+        
+        if origin not in graph or destination not in graph: 
+            print(f"[WARNING] Origin '{origin}' or destination '{destination}' is not in the graph.")
+            results.append({
+                "Origin_city_airport": origin,
+                "Destination_city_airport": destination,
+                "Best_route": "No route found",
+                "Total_distance": "N/A"
+            })
+            continue
+        
+        distances, previous_nodes = dijkstra_adj_list_weighted(graph, weights, origin) # apply Dijkstra's algorithm
+        path = reconstruct_path(previous_nodes, origin, destination)
+        
+        if path == "No route found":
+            results.append({
+                "Origin_city_airport": origin,
+                "Destination_city_airport": destination,
+                "Best_route": "No route found",
+                "Total_distance": "N/A"
+            })
+        else:
+            total_distance = distances.get(destination, float('inf'))
+            results.append({
+                "Origin_city_airport": origin,
+                "Destination_city_airport": destination,
+                "Best_route": path,
+                "Total_distance": total_distance
+            })
+    
+    return pd.DataFrame(results)
+
+def plot_best_route_on_map(df, best_route_df):
+    """
+    Plot only the best route on a Folium map.
+    """
+    # Extract the best route information
+    origin_airport = best_route_df.iloc[0]['Origin_city_airport']
+    destination_airport = best_route_df.iloc[0]['Destination_city_airport']
+    best_route = best_route_df.iloc[0]['Best_route'].split(" → ")
+
+    # Create a base map centered on the first airport
+    start_coords = df.loc[df['Origin_airport'] == origin_airport, ['Org_airport_lat', 'Org_airport_long']].iloc[0]
+    m = folium.Map(location=[start_coords['Org_airport_lat'], start_coords['Org_airport_long']], zoom_start=5)
+    
+    # Plot each airport in the best route
+    for i in range(len(best_route)):
+        airport = best_route[i]
+        
+        if i == 0:
+            # Starting airport
+            coords = df.loc[df['Origin_airport'] == airport, ['Org_airport_lat', 'Org_airport_long']].iloc[0]
+            folium.Marker(
+                location=[coords['Org_airport_lat'], coords['Org_airport_long']],
+                popup=f"Start: {airport}",
+                icon=folium.Icon(color='green', icon='plane')
+            ).add_to(m)
+        elif i == len(best_route) - 1:
+            # Destination airport
+            coords = df.loc[df['Destination_airport'] == airport, ['Dest_airport_lat', 'Dest_airport_long']].iloc[0]
+            folium.Marker(
+                location=[coords['Dest_airport_lat'], coords['Dest_airport_long']],
+                popup=f"End: {airport}",
+                icon=folium.Icon(color='red', icon='flag')
+            ).add_to(m)
+        else:
+            # Intermediate airports
+            coords = df.loc[df['Origin_airport'] == airport, ['Org_airport_lat', 'Org_airport_long']].iloc[0]
+            folium.Marker(
+                location=[coords['Org_airport_lat'], coords['Org_airport_long']],
+                popup=airport,
+                icon=folium.Icon(color='blue', icon='circle')
+            ).add_to(m)
+
+    # Draw the route
+    route_coords = []
+    for i in range(len(best_route) - 1):
+        start_airport = best_route[i]
+        end_airport = best_route[i + 1]
+        
+        start_coords = df.loc[df['Origin_airport'] == start_airport, ['Org_airport_lat', 'Org_airport_long']].iloc[0]
+        end_coords = df.loc[df['Destination_airport'] == end_airport, ['Dest_airport_lat', 'Dest_airport_long']].iloc[0]
+        
+        route_coords.append(([start_coords['Org_airport_lat'], start_coords['Org_airport_long']],
+                             [end_coords['Dest_airport_lat'], end_coords['Dest_airport_long']]))
+    
+    for start, end in route_coords:
+        folium.PolyLine([start, end], color='red', weight=4, opacity=0.7).add_to(m)
+    
+    return m
