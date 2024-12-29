@@ -1,3 +1,17 @@
+"""
+This script provides functions to calculate various centrality measures in a flight network.
+Centrality measures include:
+    - Degree Centrality: Reflects the number of connections (in and out) a node has.
+    - Closeness Centrality: Measures how easily a node can reach all other nodes.
+    - Betweenness Centrality: Quantifies the number of shortest paths passing through a node.
+    - PageRank: Evaluates the relative importance of a node based on incoming links.
+
+Each function operates on a directed graph, where nodes represent airports and edges
+represent flights between them. These measures help analyze network structures and
+the importance of specific nodes.
+"""
+
+
 from collections import defaultdict, deque
 import matplotlib.pyplot as plt
 
@@ -19,9 +33,9 @@ def calculate_degree_centrality(flight_network, airport):
     Returns:
         A float representing the normalized degree centrality.
     """
-    out_degree = flight_network.out_degree(airport)
-    in_degree = flight_network.in_degree(airport)
-    total_nodes = flight_network.number_of_nodes() - 1
+    out_degree = flight_network.out_degree(airport)  # Outgoing connections
+    in_degree = flight_network.in_degree(airport)  # Incoming connections
+    total_nodes = flight_network.number_of_nodes() - 1  # Exclude the node itself
     return (out_degree + in_degree) / (2 * total_nodes) if total_nodes > 0 else 0.0
 
 def calculate_closeness_centrality(flight_network, airport):
@@ -41,14 +55,13 @@ def calculate_closeness_centrality(flight_network, airport):
     if airport not in flight_network:
         return 0.0
 
-    distances = bfs_shortest_paths(flight_network, airport)
+    distances = bfs_shortest_paths(flight_network, airport)  # Get shortest path distances
     reachable_nodes = [dist for dist in distances.values() if dist < float('inf')]
 
     if len(reachable_nodes) <= 1:
-        return 0.0
+        return 0.0  # Closeness is undefined for isolated nodes
 
     reachable_sum = sum(reachable_nodes)
-    n = flight_network.number_of_nodes()
     return (len(reachable_nodes) - 1) / reachable_sum
 
 def bfs_shortest_paths(graph, start_node):
@@ -69,8 +82,8 @@ def bfs_shortest_paths(graph, start_node):
 
     while queue:
         current = queue.popleft()
-        for neighbor in graph.successors(current):
-            if distances[neighbor] == float('inf'):
+        for neighbor in graph.successors(current):  # Visit all outgoing edges
+            if distances[neighbor] == float('inf'):  # First visit
                 distances[neighbor] = distances[current] + 1
                 queue.append(neighbor)
     return distances
@@ -103,11 +116,12 @@ def calculate_betweenness_centrality(flight_network, airport):
                 continue
 
             path_count = count_paths_through_node(dest, airport, parents)
-            passing_paths += path_count
+            passing_paths += path_count  # Increment paths passing through the airport
             total_paths += paths[dest]
 
     n = flight_network.number_of_nodes()
     return passing_paths / ((n - 1) * (n - 2)) if total_paths > 0 else 0.0
+
 
 def calculate_shortest_path_dependencies(flight_network, source):
     """
@@ -136,16 +150,17 @@ def calculate_shortest_path_dependencies(flight_network, source):
         current = queue.popleft()
         for neighbor in flight_network.successors(current):
             distance = distances[current] + 1
-            if distance < distances[neighbor]:
+            if distance < distances[neighbor]:  # Found a shorter path
                 distances[neighbor] = distance
                 paths[neighbor] = paths[current]
                 parents[neighbor] = [current]
                 queue.append(neighbor)
-            elif distance == distances[neighbor]:
+            elif distance == distances[neighbor]:  # Found an equally short path
                 paths[neighbor] += paths[current]
                 parents[neighbor].append(current)
 
     return paths, parents
+
 
 def count_paths_through_node(dest, node, parents):
     """
@@ -164,12 +179,14 @@ def count_paths_through_node(dest, node, parents):
 
     while stack:
         current = stack.pop()
-        if current == node:
+        if current == node:  # Node lies on the path
             path_count += 1
         else:
-            stack.extend(parents[current])
+            stack.extend(parents[current])  # Explore parent nodes
 
     return path_count
+
+
 
 def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=100, tolerance=1e-6):
     """
@@ -189,7 +206,7 @@ def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=1
         A float representing the PageRank of the specified airport.
     """
     N = flight_network.number_of_nodes()
-    ranks = {node: 1 / N for node in flight_network.nodes()}
+    ranks = {node: 1 / N for node in flight_network.nodes()}  # Initialize ranks
     sink_nodes = {node for node in flight_network.nodes() if flight_network.out_degree(node) == 0}
 
     for _ in range(max_iter):
@@ -198,14 +215,16 @@ def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=1
         for node in flight_network.nodes():
             rank_sum = sum(
                 previous_ranks[neighbor] / flight_network.out_degree(neighbor)
-                for neighbor in flight_network.predecessors(node)
+                for neighbor in flight_network.predecessors(node)  # Incoming edges
             )
             ranks[node] = (1 - damping_factor) / N + damping_factor * (rank_sum + sink_rank)
 
+        # Check for convergence
         if max(abs(ranks[node] - previous_ranks[node]) for node in flight_network.nodes()) < tolerance:
             break
 
     return ranks.get(airport, 0)
+    
 
 # =====================================================
 # Analyze Centrality for Single Airport
