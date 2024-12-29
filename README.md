@@ -3,6 +3,12 @@
 
 This project analyzes the flight network of U.S. airports and focuses on various analytical tasks. It includes the following components:
 
+The Repository structure can be seen [here](https://uithub.com/robertomagno1/ADM-HM5)
+
+To avoid any conflict, we pushed everything in NbViewer:
+[Main (part from 1 to 5)](https://nbviewer.org/github/robertomagno1/ADM-HM5/blob/main/main.ipynb)
+[Bonus](https://nbviewer.org/github/robertomagno1/ADM-HM5/blob/main/BonusQuestion.ipynb)
+[AQ](https://github.com/robertomagno1/ADM-HM5/blob/main/algorithm.ipynb)
 ---
 
 ## 1. Flight Network Analysis
@@ -16,6 +22,7 @@ This project analyzes the flight network of U.S. airports and focuses on various
 - Degree distribution histograms (in-degree and out-degree).
 - Interactive map visualizing flight routes across the network.
 
+[Map is available also here](https://nbviewer.org/github/robertomagno1/ADM-HM5/blob/main/flight_network_map.html)
 ---
 
 ## 2. Nodes' Contribution (Centrality)
