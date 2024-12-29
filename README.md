@@ -175,10 +175,10 @@ The analysis is based on a **U.S. airport dataset**, which includes:
 
 ---
 
-**Authors**: Roberto Magno Mazzotta,Yara Osama Abbas Farid Youssef, xxx
+**Authors**: Roberto Magno Mazzotta,Yara Osama Abbas Farid Youssef, Emanuele Iaccarino
 **Email**:  
 - Roberto: magnomazzotta.2200470@studenti.uniroma1.it  
 - Yara: youssef.1933705@studenti.uniroma1.it
-- xxx
+- Emanuele: emanueleiaccarino.ei@gmail.com
 
 *Master's in Data Science, Sapienza University of Rome*  
