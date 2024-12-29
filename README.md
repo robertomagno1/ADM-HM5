@@ -166,7 +166,7 @@ The analysis is based on a **U.S. airport dataset**, which includes:
 
 1. **Notebook Loading**:
    - If a notebook does not render properly on GitHub, try:
-     - [NBViewer](https://nbviewer.org/) for online rendering.
+     - [NBViewer](https://nbviewer.org/github/robertomagno1/ADM-HM5/tree/main/) for online rendering.
      - Downloading the notebook and opening it locally.
 
 2. **Responsible LLM Usage**:
@@ -175,10 +175,10 @@ The analysis is based on a **U.S. airport dataset**, which includes:
 
 ---
 
-**Authors**: Roberto Magno Mazzotta,xxx, xxx
+**Authors**: Roberto Magno Mazzotta,Yara Osama Abbas Farid Youssef, xxx
 **Email**:  
 - Roberto: magnomazzotta.2200470@studenti.uniroma1.it  
-- xxx
+- Yara: youssef.1933705@studenti.uniroma1.it
 - xxx
 
 *Master's in Data Science, Sapienza University of Rome*  
