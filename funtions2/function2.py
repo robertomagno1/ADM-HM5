@@ -1,6 +1,171 @@
 from collections import defaultdict, deque
 import matplotlib.pyplot as plt
 
+
+
+## this is the main functions we use in the final notebook for part 2 ::::  
+
+
+# =====================================================
+# Centrality Computation Functions
+# =====================================================
+
+def calculate_degree_centrality(flight_network, airport):
+    out_degree = flight_network.out_degree(airport)
+    in_degree = flight_network.in_degree(airport)
+    total_nodes = flight_network.number_of_nodes() - 1
+    return (out_degree + in_degree) / (2 * total_nodes) if total_nodes > 0 else 0.0
+
+def calculate_closeness_centrality(flight_network, airport):
+    if airport not in flight_network:
+        return 0.0
+
+    distances = bfs_shortest_paths(flight_network, airport)
+    reachable_nodes = [dist for dist in distances.values() if dist < float('inf')]
+
+    if len(reachable_nodes) <= 1:
+        return 0.0
+
+    reachable_sum = sum(reachable_nodes)
+    n = flight_network.number_of_nodes()
+    return (len(reachable_nodes) - 1) / reachable_sum
+
+def bfs_shortest_paths(graph, start_node):
+    distances = {node: float('inf') for node in graph.nodes()}
+    distances[start_node] = 0
+    queue = deque([start_node])
+
+    while queue:
+        current = queue.popleft()
+        for neighbor in graph.successors(current):
+            if distances[neighbor] == float('inf'):
+                distances[neighbor] = distances[current] + 1
+                queue.append(neighbor)
+    return distances
+
+def calculate_betweenness_centrality(flight_network, airport):
+    total_paths = 0
+    passing_paths = 0
+
+    for src in flight_network.nodes():
+        if src == airport:
+            continue
+
+        paths, parents = calculate_shortest_path_dependencies(flight_network, src)
+
+        for dest in flight_network.nodes():
+            if dest == airport or dest == src or paths[dest] == 0:
+                continue
+
+            path_count = count_paths_through_node(dest, airport, parents)
+            passing_paths += path_count
+            total_paths += paths[dest]
+
+    n = flight_network.number_of_nodes()
+    return passing_paths / ((n - 1) * (n - 2)) if total_paths > 0 else 0.0
+
+def calculate_shortest_path_dependencies(flight_network, source):
+    paths = defaultdict(int)
+    parents = defaultdict(list)
+    distances = {node: float('inf') for node in flight_network.nodes()}
+
+    paths[source] = 1
+    distances[source] = 0
+    queue = deque([source])
+
+    while queue:
+        current = queue.popleft()
+        for neighbor in flight_network.successors(current):
+            distance = distances[current] + 1
+            if distance < distances[neighbor]:
+                distances[neighbor] = distance
+                paths[neighbor] = paths[current]
+                parents[neighbor] = [current]
+                queue.append(neighbor)
+            elif distance == distances[neighbor]:
+                paths[neighbor] += paths[current]
+                parents[neighbor].append(current)
+
+    return paths, parents
+
+def count_paths_through_node(dest, node, parents):
+    stack = deque([dest])
+    path_count = 0
+
+    while stack:
+        current = stack.pop()
+        if current == node:
+            path_count += 1
+        else:
+            stack.extend(parents[current])
+
+    return path_count
+
+def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=100, tolerance=1e-6):
+    N = flight_network.number_of_nodes()
+    ranks = {node: 1 / N for node in flight_network.nodes()}
+    sink_nodes = {node for node in flight_network.nodes() if flight_network.out_degree(node) == 0}
+
+    for _ in range(max_iter):
+        previous_ranks = ranks.copy()
+        sink_rank = damping_factor * sum(previous_ranks[node] for node in sink_nodes) / N
+        for node in flight_network.nodes():
+            rank_sum = sum(
+                previous_ranks[neighbor] / flight_network.out_degree(neighbor)
+                for neighbor in flight_network.predecessors(node)
+            )
+            ranks[node] = (1 - damping_factor) / N + damping_factor * (rank_sum + sink_rank)
+
+        if max(abs(ranks[node] - previous_ranks[node]) for node in flight_network.nodes()) < tolerance:
+            break
+
+    return ranks.get(airport, 0)
+
+# =====================================================
+# Analyze Centrality for Single Airport
+# =====================================================
+def analyze_centrality(flight_network, airport):
+    return {
+        "Airport": airport,
+        "Degree Centrality": calculate_degree_centrality(flight_network, airport),
+        "Closeness Centrality": calculate_closeness_centrality(flight_network, airport),
+        "Betweenness Centrality": calculate_betweenness_centrality(flight_network, airport),
+        "PageRank": calculate_page_rank(flight_network, airport),
+    }
+
+# =====================================================
+# Compare Centralities Across Airports
+# =====================================================
+def compare_centralities(flight_network):
+    import matplotlib.pyplot as plt
+    centralities = []
+
+    for airport in tqdm(flight_network.nodes(), desc="Calculating Centralities"):
+        centrality = analyze_centrality(flight_network, airport)
+        centralities.append(centrality)
+
+    results_df = pd.DataFrame(centralities)
+
+    # Plot distributions
+    for col in ["Degree Centrality", "Closeness Centrality", "Betweenness Centrality", "PageRank"]:
+        plt.figure(figsize=(10, 6))
+        plt.hist(results_df[col], bins=20, color='skyblue', edgecolor='black')
+        plt.title(f"{col} Distribution")
+        plt.xlabel(col)
+        plt.ylabel("Frequency")
+        plt.show()
+
+    # Get top 5 airports for each centrality measure
+    results = {
+        "top_degree": results_df.nlargest(5, "Degree Centrality")[["Airport", "Degree Centrality"]].values.tolist(),
+        "top_closeness": results_df.nlargest(5, "Closeness Centrality")[["Airport", "Closeness Centrality"]].values.tolist(),
+        "top_betweenness": results_df.nlargest(5, "Betweenness Centrality")[["Airport", "Betweenness Centrality"]].values.tolist(),
+        "top_pagerank": results_df.nlargest(5, "PageRank")[["Airport", "PageRank"]].values.tolist(),
+    }
+
+    return results
+
+
 def build_directed_graph(df):
     """
     Build a directed graph from a DataFrame that has at least these columns:
