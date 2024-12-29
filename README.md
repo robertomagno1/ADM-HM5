@@ -73,6 +73,7 @@ To avoid any conflict, we pushed everything in NbViewer:
 - Color-coded communities on the graph to highlight distinct groups.
 - Evaluate whether two specific cities belong to the same community.
 
+We are gonna upload the file in a second moment using we transfer since it's too big
 ---
 
 ## 6. Bonus: Connected Components on MapReduce
