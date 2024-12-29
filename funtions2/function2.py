@@ -1,22 +1,43 @@
 from collections import defaultdict, deque
 import matplotlib.pyplot as plt
 
-
-
-## this is the main functions we use in the final notebook for part 2 ::::  
-
-
 # =====================================================
 # Centrality Computation Functions
 # =====================================================
 
 def calculate_degree_centrality(flight_network, airport):
+    """
+    Compute the degree centrality of a given airport in the flight network.
+    
+    Degree centrality measures how connected a node is by calculating the sum of its 
+    in-degree and out-degree, normalized by the total number of other nodes in the graph.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        airport: The node representing the airport for which centrality is calculated.
+
+    Returns:
+        A float representing the normalized degree centrality.
+    """
     out_degree = flight_network.out_degree(airport)
     in_degree = flight_network.in_degree(airport)
     total_nodes = flight_network.number_of_nodes() - 1
     return (out_degree + in_degree) / (2 * total_nodes) if total_nodes > 0 else 0.0
 
 def calculate_closeness_centrality(flight_network, airport):
+    """
+    Compute the closeness centrality for a given airport in the flight network.
+    
+    Closeness centrality measures how easily a node can reach all other nodes in the graph. 
+    It is the reciprocal of the sum of shortest path distances from the node to all others.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        airport: The node representing the airport for which centrality is calculated.
+
+    Returns:
+        A float representing the closeness centrality.
+    """
     if airport not in flight_network:
         return 0.0
 
@@ -31,6 +52,17 @@ def calculate_closeness_centrality(flight_network, airport):
     return (len(reachable_nodes) - 1) / reachable_sum
 
 def bfs_shortest_paths(graph, start_node):
+    """
+    Perform a Breadth-First Search (BFS) to calculate the shortest paths 
+    from a start node to all other nodes in the graph.
+
+    Parameters:
+        graph: A directed graph.
+        start_node: The starting node for the BFS traversal.
+
+    Returns:
+        A dictionary mapping each node to its shortest path distance from the start node.
+    """
     distances = {node: float('inf') for node in graph.nodes()}
     distances[start_node] = 0
     queue = deque([start_node])
@@ -44,6 +76,19 @@ def bfs_shortest_paths(graph, start_node):
     return distances
 
 def calculate_betweenness_centrality(flight_network, airport):
+    """
+    Compute the betweenness centrality of a given airport.
+    
+    Betweenness centrality measures the extent to which a node lies on the shortest paths
+    between pairs of other nodes in the graph.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        airport: The node representing the airport for which centrality is calculated.
+
+    Returns:
+        A float representing the betweenness centrality.
+    """
     total_paths = 0
     passing_paths = 0
 
@@ -65,6 +110,20 @@ def calculate_betweenness_centrality(flight_network, airport):
     return passing_paths / ((n - 1) * (n - 2)) if total_paths > 0 else 0.0
 
 def calculate_shortest_path_dependencies(flight_network, source):
+    """
+    Compute the shortest path counts and parent relationships for a source node.
+    
+    This function identifies all shortest paths from the source to other nodes and tracks 
+    the parent nodes contributing to those paths.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        source: The node from which shortest paths are calculated.
+
+    Returns:
+        paths: A dictionary with node-wise shortest path counts.
+        parents: A dictionary mapping each node to its parent nodes in the shortest paths.
+    """
     paths = defaultdict(int)
     parents = defaultdict(list)
     distances = {node: float('inf') for node in flight_network.nodes()}
@@ -89,6 +148,17 @@ def calculate_shortest_path_dependencies(flight_network, source):
     return paths, parents
 
 def count_paths_through_node(dest, node, parents):
+    """
+    Count the number of shortest paths passing through a specific node.
+
+    Parameters:
+        dest: The destination node of the paths.
+        node: The node to check for path inclusion.
+        parents: A dictionary mapping each node to its parent nodes in the shortest paths.
+
+    Returns:
+        The number of paths passing through the specified node.
+    """
     stack = deque([dest])
     path_count = 0
 
@@ -102,6 +172,22 @@ def count_paths_through_node(dest, node, parents):
     return path_count
 
 def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=100, tolerance=1e-6):
+    """
+    Compute the PageRank of an airport in the flight network.
+    
+    PageRank measures the importance of a node based on the number and quality of links 
+    directed to it, using a random walk model.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        airport: The node representing the airport for which PageRank is calculated.
+        damping_factor: The probability of continuing the random walk at each step.
+        max_iter: Maximum number of iterations for convergence.
+        tolerance: Convergence threshold for rank changes.
+
+    Returns:
+        A float representing the PageRank of the specified airport.
+    """
     N = flight_network.number_of_nodes()
     ranks = {node: 1 / N for node in flight_network.nodes()}
     sink_nodes = {node for node in flight_network.nodes() if flight_network.out_degree(node) == 0}
@@ -125,6 +211,19 @@ def calculate_page_rank(flight_network, airport, damping_factor=0.85, max_iter=1
 # Analyze Centrality for Single Airport
 # =====================================================
 def analyze_centrality(flight_network, airport):
+    """
+    Analyze various centrality measures for a given airport.
+    
+    Combines degree centrality, closeness centrality, betweenness centrality, and PageRank 
+    into a single dictionary for comparison.
+
+    Parameters:
+        flight_network: A directed graph representing the flight network.
+        airport: The node representing the airport to analyze.
+
+    Returns:
+        A dictionary containing the centrality measures for the specified airport.
+    """
     return {
         "Airport": airport,
         "Degree Centrality": calculate_degree_centrality(flight_network, airport),
@@ -132,6 +231,7 @@ def analyze_centrality(flight_network, airport):
         "Betweenness Centrality": calculate_betweenness_centrality(flight_network, airport),
         "PageRank": calculate_page_rank(flight_network, airport),
     }
+
 
 # =====================================================
 # Compare Centralities Across Airports
